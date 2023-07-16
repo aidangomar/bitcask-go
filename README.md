@@ -1,0 +1,1 @@
+Similar to etcd, but with bitcask as the underlying storage engine
