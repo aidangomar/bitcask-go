@@ -30,7 +30,7 @@ func check(e error) {
 func splitInput(input string) (string, string, string, error) {
 	parts := strings.Split(input, " ")
 	if len(parts) < 2 {
-		return "", "", "", errors.New("query format:\n\tget [key]\n\t put [key] [value]")
+		return "", "", "", errors.New("[ERROR] query format:\n  get [key]\n  put [key] \"[value]\"")
 	}
 
 	op := parts[0]
@@ -66,8 +66,6 @@ func handlePut(key string, value string) (err error) {
 	hash := crc32.ChecksumIEEE(buf.Bytes())
 	binary.Write(hashBuf, binary.LittleEndian, hash)
 	hashBuf.Write(buf.Bytes())
-
-	fmt.Println(hashBuf.Bytes())
 
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	check(err)
