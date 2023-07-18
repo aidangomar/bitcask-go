@@ -49,11 +49,14 @@ func handlePut(key string, value string) (err error) {
 	hashBuf := new(bytes.Buffer)
 	t := time.Now().Unix()
 
+	// fmt.Println(binary.LittleEndian.Uint32(buf2.Bytes()))
+
 	binary.Write(buf, binary.LittleEndian, uint32(t))
 	binary.Write(buf, binary.LittleEndian, uint32(len(key)))
 	binary.Write(buf, binary.LittleEndian, uint32(len(value)))
 	binary.Write(buf, binary.LittleEndian, []byte(key))
 	binary.Write(buf, binary.LittleEndian, []byte(value))
+
 
 	// calc the crc32 hash of the buffer
 	hash := crc32.ChecksumIEEE(buf.Bytes())
@@ -61,6 +64,8 @@ func handlePut(key string, value string) (err error) {
 
 	// concat the buffers
 	hashBuf.Write(buf.Bytes())
+
+	fmt.Println(hashBuf.Bytes())
 
 	err = os.WriteFile(filePath, hashBuf.Bytes(), 0644)
 
@@ -83,21 +88,22 @@ func handleGet(key string) {
 	check(err)
 	defer file.Close()
 
-	scanner := bufio.NewScanner(strings.NewReader(filePath))
-	// highest_tstamp := uint32(0)
-	// first := true
+	scanner := bufio.NewScanner(file)
+
+	// 				4								4								4									4									n							m					(bytes)
+	// | ---- crc --- | --- tstamp --- | --- keylen --- | --- val_len --- | ---- key --- | --- val --- | 
 	for scanner.Scan() {
-				// if first == true {
-				// 	first = false
-				// 	continue
-				// }
-        fmt.Println(scanner.Bytes())
+		// get the timestamp from the line
+		// crc := scanner.Bytes()[:4]
+		// tstamp := binary.LittleEndian.Uint32(scanner.Bytes()[4:8])
+		key_len := binary.LittleEndian.Uint32(scanner.Bytes()[8:12])
+		val_len := binary.LittleEndian.Uint32(scanner.Bytes()[12:16])
 
-
-
-		// // get the timestamp from the line
-		// tstamp := scanner.Bytes()[:4]
-		// // convert the tstamp to uint32
+		key := string(scanner.Bytes()[16:16+key_len])
+		val := string(scanner.Bytes()[16+key_len:16+key_len+val_len])
+		fmt.Println(key)
+		fmt.Println(val)
+		// convert the tstamp to uint32
 		// tstamp_int := binary.LittleEndian.Uint32(tstamp)
 		// fmt.Println(tstamp_int)
 		// // get the key length from the line
@@ -108,7 +114,6 @@ func handleGet(key string) {
 		// // get the key from the line
 		// key := scanner.Bytes()[8:8+binary.LittleEndian.Uint32(key_len)]
 		// fmt.Println(string(key))
-
 
 	}
 }
