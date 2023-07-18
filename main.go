@@ -30,7 +30,7 @@ func check(e error) {
 func splitInput(input string) (string, string, string, error) {
 	parts := strings.Split(input, " ")
 	if len(parts) < 2 {
-		return "", "", "", errors.New("query format: \n\tget [key] \n\t put [key] [value]")
+		return "", "", "", errors.New("query format:\n\tget [key]\n\t put [key] [value]")
 	}
 
 	op := parts[0]
@@ -49,25 +49,30 @@ func handlePut(key string, value string) (err error) {
 	hashBuf := new(bytes.Buffer)
 	t := time.Now().Unix()
 
-	// fmt.Println(binary.LittleEndian.Uint32(buf2.Bytes()))
-
 	binary.Write(buf, binary.LittleEndian, uint32(t))
 	binary.Write(buf, binary.LittleEndian, uint32(len(key)))
 	binary.Write(buf, binary.LittleEndian, uint32(len(value)))
 	binary.Write(buf, binary.LittleEndian, []byte(key))
 	binary.Write(buf, binary.LittleEndian, []byte(value))
 
+	// this is a gross hack, idk why writing a '\n' directly to a byte buffer causes 
+	// go to append the '\n' + four null characters
+	newline := make([]byte, 1)
+	newline[0] = '\n'
+	binary.Write(buf, binary.LittleEndian, newline)
+
 
 	// calc the crc32 hash of the buffer
 	hash := crc32.ChecksumIEEE(buf.Bytes())
 	binary.Write(hashBuf, binary.LittleEndian, hash)
-
-	// concat the buffers
 	hashBuf.Write(buf.Bytes())
 
 	fmt.Println(hashBuf.Bytes())
 
-	err = os.WriteFile(filePath, hashBuf.Bytes(), 0644)
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	check(err)
+	_, err = f.Write(hashBuf.Bytes())
+	check(err)
 
 	// write to the keydir
 	entry := kd_entry {
@@ -83,52 +88,55 @@ func handlePut(key string, value string) (err error) {
 }
 
 func handleGet(key string) {
-	kd_entry := keydir[key]
+	kd_entry, ok := keydir[key]
+	if !ok {
+		fmt.Println("[ERROR] Key not found")
+		return
+	}
 	file, err := os.Open(kd_entry.file_id)
 	check(err)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 
-	// 				4								4								4									4									n							m					(bytes)
-	// | ---- crc --- | --- tstamp --- | --- keylen --- | --- val_len --- | ---- key --- | --- val --- | 
+	// (bytes)   		    	4								4								4									4									n							m					
+	// (buffer)   | ---- crc --- | --- tstamp --- | --- keylen --- | --- val_len --- | ---- key --- | --- val --- | 
+
+	res := ""
+	latest_tstamp := uint32(0)
 	for scanner.Scan() {
-		// get the timestamp from the line
+		// TODO: crc validation
 		// crc := scanner.Bytes()[:4]
-		// tstamp := binary.LittleEndian.Uint32(scanner.Bytes()[4:8])
+		tstamp := binary.LittleEndian.Uint32(scanner.Bytes()[4:8])
 		key_len := binary.LittleEndian.Uint32(scanner.Bytes()[8:12])
 		val_len := binary.LittleEndian.Uint32(scanner.Bytes()[12:16])
+		disc_key := string(scanner.Bytes()[16:16+key_len])
+		disc_val := string(scanner.Bytes()[16+key_len:16+key_len+val_len])
 
-		key := string(scanner.Bytes()[16:16+key_len])
-		val := string(scanner.Bytes()[16+key_len:16+key_len+val_len])
-		fmt.Println(key)
-		fmt.Println(val)
-		// convert the tstamp to uint32
-		// tstamp_int := binary.LittleEndian.Uint32(tstamp)
-		// fmt.Println(tstamp_int)
-		// // get the key length from the line
-		// key_len := scanner.Bytes()[4:8]
-		// // convert the key length to uint32
-		// key_len_int := binary.LittleEndian.Uint32(key_len)
-		// fmt.Println(key_len_int)
-		// // get the key from the line
-		// key := scanner.Bytes()[8:8+binary.LittleEndian.Uint32(key_len)]
-		// fmt.Println(string(key))
-
+		if disc_key == key && tstamp > latest_tstamp {
+			latest_tstamp = tstamp
+			res = disc_val
+		}
+	}
+	if latest_tstamp == uint32(0) {
+		fmt.Println("[ERROR] No key found")
+	} else {
+		fmt.Println(res)
 	}
 }
 
 func main() {
-
+	os.Remove("datastore/f2")
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print(">> ")
 		text, _ := reader.ReadString('\n')
 		// strip and then split 'put key "value"' into array
 		op, k, v, err := splitInput(text)
-		check(err)
-
-
+		
+		if err != nil {
+			fmt.Println(err)
+		}
 		if op == "put" {
 			err := handlePut(k, v); 
 			if err == nil {
@@ -137,11 +145,9 @@ func main() {
 				fmt.Println(":ERROR")
 			}
 		}
-
 		if op == "get" {
 			handleGet(k)
 		}
-
 	}
 
 }
