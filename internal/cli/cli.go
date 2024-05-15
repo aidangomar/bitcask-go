@@ -14,7 +14,6 @@ func Cli() {
 		text, _ := reader.ReadString('\n')
 		// strip and then split 'put key "value"' into array
 		op, k, v, err := db.SplitInput(text)
-
 		if err != nil {
 			fmt.Println(err)
 		}

@@ -183,6 +183,7 @@ func entryToBuffer(entry file_entry) *bytes.Buffer {
 
 
 func Merge(file_id string) {
+	file_id = datafile
 	f, err := os.OpenFile(file_id, os.O_RDWR, 0600)
 	check(err)
 	defer f.Close()
