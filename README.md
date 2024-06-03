@@ -24,6 +24,8 @@ db, err := bitcask.Open("bitcask-directory", bitcask.READ|bitcask.WRITE|bitcask.
 ## API
 
 ### Open
+- Opens database for usage. If database does not exist and WRITE flag is passed, a new bitcask will be created
+
 ```
 db, err := bitcask.Open("new-bitcask-store", bitcask.READ|bitcask.WRITE|bitcask.CREATE)
 ```
