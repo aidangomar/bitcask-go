@@ -1,5 +1,3 @@
 make:
-	rm -rf datastore && mkdir datastore && go build ./... && go run ./cmd
+	rm -rf test/datastore && go build ./... && go test ./...
 
-run:
-	./bitcask-go

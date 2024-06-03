@@ -15,9 +15,13 @@ go build ./...
 go run ./cmd
 ```
 
-## Commands
-* **Put**: Store data by key
-```put [key] [value]```
-
-* **Get**: Get data by key
-```get [key]```
+## API
+```
+db := bitcask.Open("new-bitcask-store", bitcask.READ|bitcask.WRITE|bitcask.CREATE)
+err := db.Put("key", "value")
+value, err := db.Get("key")
+db.Delete("key")
+db.Put("another key", "another value")
+db.Merge()
+db.Get("another key")
+```
