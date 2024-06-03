@@ -20,16 +20,19 @@ func TestDB(t *testing.T) {
 	err = db.Put("something", "else")
 	if err != nil {
 		t.Fatalf("Error: %v", err)
+
 	}
 	err = db.Delete("key1")
 	if err != nil {
 		t.Fatalf("Error: %v", err)
+	
 	}
+
 	err = db.Put("some", "new")
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
-	// test key1 to equal val1
+
 	key, err := db.Get("key1")
 	if err == nil {
 		t.Fatalf("Error: %v", err)
@@ -37,6 +40,7 @@ func TestDB(t *testing.T) {
 	if key == "val1" {
 		t.Fatalf("Expected val1, got %v", key)
 	}
+
 	key, err = db.Get("something")
 	if err != nil {
 		t.Fatalf("Error: %v", err)
@@ -55,7 +59,6 @@ func TestDB(t *testing.T) {
 
 
 	for i := 0; i < 10000; i++ {
-		// Put string i as key and value
 		err = db.Put(strconv.Itoa(i), strconv.Itoa(i))
 		if err != nil {
 			panic(err)
